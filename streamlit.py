@@ -15,9 +15,8 @@ from model import LSTM_Corona
 
 
 # #モデルの存在確認
-MODEL_DIR_PATH = './model/bert' #モデル関連ディレクトリ
-MODEL_FILE_PATH =  './model/bert/pytorch_model.bin' #モデル本体
-CATEGORY_PATH = "./model/text"  # フォルダの場所を指定
+MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
+MODEL_FILE_PATH =  './ai-app-data/model/bert/pytorch_model.bin' #モデル本体
 
 #基準年月日
 base_y = 2021
@@ -27,7 +26,7 @@ base_d = 24
 window_size = 30
 
 #COVID19データ取り込み
-covid19_data = './time_series_covid19_confirmed_global.csv'
+covid19_data = './ai-app-data/time_series_covid19_confirmed_global.csv'
 df = pd.read_csv(covid19_data)
 
 #データの中で0で変化がないところを削る。
