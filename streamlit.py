@@ -16,7 +16,6 @@ from PIL import Image
 import io 
 import torchvision
 from torchvision import transforms
-from torchvision.datasets import CIFAR10
 
 # #モデルの存在確認
 BERT_MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
@@ -54,7 +53,6 @@ def main():
     selected_item = st.selectbox('・解析処理を選択して下さい。',
                                  ['', '画像分類（RESNET）', 'Covid19予測（LSTM）', '文章分類（BERT）'])
     
- 
     if selected_item == '画像分類（RESNET）':
         st.write('CIFAR-100の100クラスに画像を分類します。')
         # st.write('分類したい画像をアップロードして下さい。')
@@ -80,8 +78,7 @@ def main():
 
             for probs, indices in zip(batch_probs, batch_indices):
                 for k in range(3):
-                    st.write(f"Top-{k + 1} {indices[k]} {probs[k]:.2%}")
-                    # st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
+                    st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
 
     elif selected_item == 'Covid19予測（LSTM）':
         selected_item = st.selectbox('・何日後まで予測するか選択して下さい。',
@@ -188,7 +185,7 @@ def analyze_resnet(img):
     inputs = inputs.unsqueeze(0) #unsqueezeは元のテンソルを書き換えずに、次元を増やしたテンソルを返す。
     model = load_resnet_model()
     out = model(inputs)
-    st.write("解析中")
+
     return out
 
 #LSTM解析
@@ -221,7 +218,7 @@ def analyze_lstm(future=10):
 # CIFARのクラス名取得
 @st.cache(allow_output_mutation=True)
 def get_cifar100_classes():
-    trainset = CIFAR100(root=CIFAR100_PATH,download=True)
+    trainset = torchvision.datasets.CIFAR100(root=CIFAR100_PATH,download=True)
     return trainset.classes
 
 #BERT解析
