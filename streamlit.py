@@ -12,11 +12,18 @@ import japanize_matplotlib #matplotlibのラベルの文字化け解消のため
 import datetime
 import matplotlib.ticker as mtick #グラフ描画時にy軸に%表示する。
 from model import LSTM_Corona
-
+from PIL import Image
+import io 
+import torchvision
+from torchvision import transforms
+from torchvision.datasets import CIFAR10
 
 # #モデルの存在確認
-MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
-MODEL_FILE_PATH =  './ai-app-data/model/bert/pytorch_model.bin' #モデル本体
+BERT_MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
+BERT_MODEL_FILE_PATH =  './ai-app-data/model/bert/pytorch_model.bin' #モデル本体
+#RESNET_MODEL_FILE_PATH =  './ai-app-data/model/resnet/tl_resnet50_gpu.pth' #モデル本体
+RESNET_MODEL_FILE_PATH =  './ai-app-data/model/resnet/tl_resnet50_cpu.pth' #モデル本体
+CIFAR100_PATH = './ai-app-data/CIFAR100'
 
 #基準年月日
 base_y = 2021
@@ -42,12 +49,41 @@ y = daily_global.values.astype(float)
 
 def main():
     #タイトルの表示
-    st.title('時系列処理')
+    st.title('解析処理')
 
-    selected_item = st.selectbox('・時系列処理を選択して下さい。',
-                                 ['', 'Covid19予測（LSTM）', '文章分類（BERT）'])
+    selected_item = st.selectbox('・解析処理を選択して下さい。',
+                                 ['', '画像分類（RESNET）', 'Covid19予測（LSTM）', '文章分類（BERT）'])
     
-    if selected_item == 'Covid19予測（LSTM）':
+ 
+    if selected_item == '画像分類（RESNET）':
+        st.write('CIFAR-100の100クラスに画像を分類します。')
+        # st.write('分類したい画像をアップロードして下さい。')
+        uploaded_file = st.file_uploader('分類したい画像をアップロードして下さい。')
+
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            img_array = np.array(image)
+            st.image(
+                image, caption='upload images',
+                use_column_width=True #画像の横幅をカラム幅に合わせす。
+            )
+
+            out = analyze_resnet(image)
+            F = nn.Softmax(dim=1)
+            batch_probs = F(out)
+            #batch_probs = F.softmax(outputs, dim=1)
+
+            batch_probs, batch_indices = batch_probs.sort(dim=1, descending=True)
+
+            # cifar100のクラス名取得
+            class_name_cifar100 = get_cifar100_classes()
+
+            for probs, indices in zip(batch_probs, batch_indices):
+                for k in range(3):
+                    st.write(f"Top-{k + 1} {indices[k]} {probs[k]:.2%}")
+                    # st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
+
+    elif selected_item == 'Covid19予測（LSTM）':
         selected_item = st.selectbox('・何日後まで予測するか選択して下さい。',
                                  ['', '10日後', '20日後', '30日後', '60日後'])
         #予測ボタン
@@ -95,7 +131,7 @@ def main():
         if st.session_state.start and not text:
             st.write('<span style="color:red;">解析する記事を入力して下さい。</span>', unsafe_allow_html=True)
        
-        #if os.path.isdir(MODEL_DIR_PATH) and os.path.isfile(MODEL_FILE_PATH) and text and start:
+        #if os.path.isdir(BERT_MODEL_DIR_PATH) and os.path.isfile(BERT_MODEL_FILE_PATH) and text and start:
         #if start and text:
         if st.session_state.start and text:
             
@@ -143,6 +179,18 @@ def main():
             ax.yaxis.set_major_formatter(mtick.PercentFormatter())#y軸を%表示
             st.pyplot(fig)
 
+#Resnet解析
+def analyze_resnet(img):
+
+    transforms = get_transforms()
+    inputs = transforms(img)
+ 
+    inputs = inputs.unsqueeze(0) #unsqueezeは元のテンソルを書き換えずに、次元を増やしたテンソルを返す。
+    model = load_resnet_model()
+    out = model(inputs)
+    st.write("解析中")
+    return out
+
 #LSTM解析
 def analyze_lstm(future=10):
     #モデルの読み込み
@@ -170,12 +218,18 @@ def analyze_lstm(future=10):
 
     return out
 
+# CIFARのクラス名取得
+@st.cache(allow_output_mutation=True)
+def get_cifar100_classes():
+    trainset = CIFAR100(root=CIFAR100_PATH,download=True)
+    return trainset.classes
+
 #BERT解析
 def analyze_bert(text):
 
      #モデル読み込み
-     #loaded_model = BertForSequenceClassification.from_pretrained(MODEL_DIR_PATH)
-     #loaded_tokenizer = BertJapaneseTokenizer.from_pretrained(MODEL_DIR_PATH)
+     #loaded_model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR_PATH)
+     #loaded_tokenizer = BertJapaneseTokenizer.from_pretrained(BERT_MODEL_DIR_PATH)
 
      loaded_model = load_bert_model()
      loaded_tokenizer = load_bert_tokenizer()
@@ -189,13 +243,46 @@ def analyze_bert(text):
 
 @st.cache(allow_output_mutation=True)
 def load_bert_model():
-    model = BertForSequenceClassification.from_pretrained(MODEL_DIR_PATH)
+    model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR_PATH)
     return model
 
 @st.cache(allow_output_mutation=True)
 def load_bert_tokenizer():
-    tokenizer = BertJapaneseTokenizer.from_pretrained(MODEL_DIR_PATH)
+    tokenizer = BertJapaneseTokenizer.from_pretrained(BERT_MODEL_DIR_PATH)
     return tokenizer
+
+# Resnetのパラメータ読み込み
+@st.cache(allow_output_mutation=True)
+def load_resnet_model():
+    model = get_resnet_model()
+    model.load_state_dict(torch.load(RESNET_MODEL_FILE_PATH))
+    return model
+
+# Resnetのモデル構築
+@st.cache(allow_output_mutation=True)
+def get_resnet_model():
+    # Resnetモデル取得
+    model = torchvision.models.resnet50(pretrained=True)
+    # モデルの最終層を100個のクラスの予測用に改良する。
+    model.fc = nn.Linear(2048, 100)
+    # モデルを評価モードにする
+    model.eval()
+    return model
+
+# Transformer作成
+@st.cache(allow_output_mutation=True)
+def get_transforms():
+    transform = transforms.Compose(
+        [
+            transforms.Resize(256),  # (256, 256) で切り抜く。
+            transforms.CenterCrop(224),  # 画像の中心に合わせて、(224, 224) で切り抜く
+            transforms.ToTensor(),  # テンソルにする。
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),  # 標準化する。
+        ]
+    )
+    return transform
 
 if __name__ == "__main__":
     main()
