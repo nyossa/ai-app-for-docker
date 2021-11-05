@@ -3,9 +3,6 @@ import numpy as np
 import pandas as pd
 import os
 import matplotlib.pyplot as plt 
-import torch #BERT動かすにはtorchライブラリが必要。
-from transformers import BertForSequenceClassification, BertJapaneseTokenizer
-from torch import nn #ソフトマックス関数使用。
 import pickle
 from sklearn.preprocessing import MinMaxScaler
 import japanize_matplotlib #matplotlibのラベルの文字化け解消のためインストール
@@ -14,8 +11,13 @@ import matplotlib.ticker as mtick #グラフ描画時にy軸に%表示する。
 from model import LSTM_Corona
 from PIL import Image
 import io 
+import torch #BERT動かすにはtorchライブラリが必要。
+from torch import nn #ソフトマックス関数使用。
+from torch.nn import functional as F
 import torchvision
 from torchvision import transforms
+from transformers import BertForSequenceClassification, BertJapaneseTokenizer
+
 
 # #モデルの存在確認
 BERT_MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
@@ -67,17 +69,15 @@ def main():
             )
 
             out = analyze_resnet(image)
-            F = nn.Softmax(dim=1)
-            batch_probs = F(out)
-            #batch_probs = F.softmax(outputs, dim=1)
+            out_F = F.softmax(out, dim=1)
 
-            batch_probs, batch_indices = batch_probs.sort(dim=1, descending=True)
+            out_F, batch_indices = out_F.sort(dim=1, descending=True)
 
             # cifar100のクラス名取得
             class_name_cifar100 = get_cifar100_classes()
 
-            for probs, indices in zip(batch_probs, batch_indices):
-                for k in range(3):
+            for probs, indices in zip(out_F, batch_indices):
+                for k in range(5):
                     st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
 
     elif selected_item == 'Covid19予測（LSTM）':
@@ -128,8 +128,6 @@ def main():
         if st.session_state.start and not text:
             st.write('<span style="color:red;">解析する記事を入力して下さい。</span>', unsafe_allow_html=True)
        
-        #if os.path.isdir(BERT_MODEL_DIR_PATH) and os.path.isfile(BERT_MODEL_FILE_PATH) and text and start:
-        #if start and text:
         if st.session_state.start and text:
             
             #カテゴリー辞書
@@ -156,8 +154,7 @@ def main():
             #解析実行
             out = analyze_bert(text)
             #出力結果が確率ではないためソフトマックスに通して確率にする。
-            F = nn.Softmax(dim=1)
-            out_F = F(out[0])
+            out_F = F.softmax(out[0], dim=1)
 
             #Tensor型からnumpyに変換→detach()関数でデータ部分を切り離し、numpy()でnumpyに変換する。
             predict = out_F.detach().numpy() 
@@ -214,15 +211,6 @@ def analyze_lstm(future=10):
 
     return out
 
-<<<<<<< HEAD
-=======
-# CIFARのクラス名取得
-@st.cache(allow_output_mutation=True)
-def get_cifar100_classes():
-    trainset = torchvision.datasets.CIFAR100(root=CIFAR100_PATH,download=True)
-    return trainset.classes
-
->>>>>>> 00ad3f67955d806882d8da1e4c8330366818bf9a
 #BERT解析
 def analyze_bert(text):
 
