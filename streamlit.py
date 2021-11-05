@@ -20,10 +20,10 @@ from transformers import BertForSequenceClassification, BertJapaneseTokenizer
 
 
 # #モデルの存在確認
+LSTM_MODEL_FILE_PATH = './ai-app-data/model/lstm/lstm.pickle'
 BERT_MODEL_DIR_PATH = './ai-app-data/model/bert' #モデル関連ディレクトリ
-BERT_MODEL_FILE_PATH =  './ai-app-data/model/bert/pytorch_model.bin' #モデル本体
-#RESNET_MODEL_FILE_PATH =  './ai-app-data/model/resnet/tl_resnet50_gpu.pth' #モデル本体
-RESNET_MODEL_FILE_PATH =  './ai-app-data/model/resnet/tl_resnet50_cpu.pth' #モデル本体
+BERT_MODEL_FILE_PATH =  './ai-app-data/model/bert/pytorch_model.bin' #BERTモデル本体
+RESNET_MODEL_FILE_PATH =  './ai-app-data/model/resnet/tl_resnet50_cpu.pth' #RESNETモデル本体
 CIFAR100_PATH = './ai-app-data/CIFAR100'
 
 #基準年月日
@@ -209,7 +209,7 @@ def analyze_resnet(img):
 #LSTM解析
 def analyze_lstm(future=10):
     #モデルの読み込み
-    with open("lstm.pickle", mode="rb") as f:
+    with open(LSTM_MODEL_FILE_PATH, mode="rb") as f:
         model = pickle.load(f)
     
     #入力のデータを正規化（-1〜0に収まるように変換）
