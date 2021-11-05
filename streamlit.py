@@ -179,11 +179,10 @@ def main():
 #Resnet解析
 def analyze_resnet(img):
 
-    transforms = get_transforms()
+    model, transforms = load_resnet_model()
     inputs = transforms(img)
- 
     inputs = inputs.unsqueeze(0) #unsqueezeは元のテンソルを書き換えずに、次元を増やしたテンソルを返す。
-    model = load_resnet_model()
+
     out = model(inputs)
 
     return out
@@ -215,21 +214,19 @@ def analyze_lstm(future=10):
 
     return out
 
+<<<<<<< HEAD
+=======
 # CIFARのクラス名取得
 @st.cache(allow_output_mutation=True)
 def get_cifar100_classes():
     trainset = torchvision.datasets.CIFAR100(root=CIFAR100_PATH,download=True)
     return trainset.classes
 
+>>>>>>> 00ad3f67955d806882d8da1e4c8330366818bf9a
 #BERT解析
 def analyze_bert(text):
 
-     #モデル読み込み
-     #loaded_model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR_PATH)
-     #loaded_tokenizer = BertJapaneseTokenizer.from_pretrained(BERT_MODEL_DIR_PATH)
-
-     loaded_model = load_bert_model()
-     loaded_tokenizer = load_bert_tokenizer()
+     loaded_model, loaded_tokenizer = load_bert_model()
      max_length = 512
      words = loaded_tokenizer.tokenize(text)
      word_ids = loaded_tokenizer.convert_tokens_to_ids(words)  # 単語をインデックスに変換
@@ -238,37 +235,18 @@ def analyze_bert(text):
     
      return out
 
-@st.cache(allow_output_mutation=True)
-def load_bert_model():
-    model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR_PATH)
-    return model
-
-@st.cache(allow_output_mutation=True)
-def load_bert_tokenizer():
-    tokenizer = BertJapaneseTokenizer.from_pretrained(BERT_MODEL_DIR_PATH)
-    return tokenizer
-
 # Resnetのパラメータ読み込み
 @st.cache(allow_output_mutation=True)
 def load_resnet_model():
-    model = get_resnet_model()
-    model.load_state_dict(torch.load(RESNET_MODEL_FILE_PATH))
-    return model
-
-# Resnetのモデル構築
-@st.cache(allow_output_mutation=True)
-def get_resnet_model():
     # Resnetモデル取得
     model = torchvision.models.resnet50(pretrained=True)
     # モデルの最終層を100個のクラスの予測用に改良する。
     model.fc = nn.Linear(2048, 100)
     # モデルを評価モードにする
     model.eval()
-    return model
+    model.load_state_dict(torch.load(RESNET_MODEL_FILE_PATH))
 
-# Transformer作成
-@st.cache(allow_output_mutation=True)
-def get_transforms():
+    # transform取得
     transform = transforms.Compose(
         [
             transforms.Resize(256),  # (256, 256) で切り抜く。
@@ -279,7 +257,24 @@ def get_transforms():
             ),  # 標準化する。
         ]
     )
-    return transform
+
+    return model, transform
+
+# CIFARのクラス名取得
+@st.cache(allow_output_mutation=True)
+def get_cifar100_classes():
+    trainset = torchvision.datasets.CIFAR100(root=CIFAR100_PATH,download=True)
+    return trainset.classes
+
+@st.cache(allow_output_mutation=True)
+def load_bert_model():
+    # モデル取得
+    model = BertForSequenceClassification.from_pretrained(BERT_MODEL_DIR_PATH)
+
+    # tokenizer取得
+    tokenizer = BertJapaneseTokenizer.from_pretrained(BERT_MODEL_DIR_PATH)
+
+    return model, tokenizer
 
 if __name__ == "__main__":
     main()
