@@ -57,7 +57,6 @@ def main():
     
     if selected_item == '画像分類（RESNET）':
         st.write('CIFAR-100の100クラスに画像を分類します。')
-        # st.write('分類したい画像をアップロードして下さい。')
         uploaded_file = st.file_uploader('分類したい画像をアップロードして下さい。')
 
         if uploaded_file is not None:
@@ -76,9 +75,32 @@ def main():
             # cifar100のクラス名取得
             class_name_cifar100 = get_cifar100_classes()
 
-            for probs, indices in zip(out_F, batch_indices):
-                for k in range(5):
-                    st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
+            # 描画数
+            plot_size = 10
+
+            class_list = [] #クラス名格納用リスト
+            predict_list = np.empty((0, plot_size), np.float32)#予測値格納用空のnumpy配列
+
+            predict = out_F.detach().numpy() 
+
+            for probs, indices in zip(predict, batch_indices):
+                for k in range(plot_size):
+                    #st.write(f"Top-{k + 1} {class_name_cifar100[indices[k]]} {probs[k]:.2%}")
+                    class_list.append(class_name_cifar100[indices[k]]) #python配列へ追加
+                    predict_list = np.append(predict_list,probs[k])    #numpy配列へ追加
+
+            #解析結果の描画
+            fig, ax = plt.subplots()
+            x = np.arange(len(class_list)) 
+            y = np.round(predict_list*100).astype(int)#結果を%表示するので四捨五入しint型に変換。
+            plt.title("解析結果")
+            plt.xlabel("クラス", fontsize=13)
+            plt.ylabel("確率", fontsize=13)
+            plt.grid(linestyle='dotted', linewidth=1)
+            plt.bar(x, y, label='カテゴリー', align='center', alpha=0.7)
+            plt.xticks(x, class_list, fontsize=8, rotation=45)
+            ax.yaxis.set_major_formatter(mtick.PercentFormatter())#y軸を%表示
+            st.pyplot(fig)
 
     elif selected_item == 'Covid19予測（LSTM）':
         selected_item = st.selectbox('・何日後まで予測するか選択して下さい。',
