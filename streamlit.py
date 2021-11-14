@@ -28,8 +28,8 @@ CIFAR100_PATH = './ai-app-data/CIFAR100'
 
 #基準年月日
 base_y = 2021
-base_m = 10
-base_d = 24
+base_m = 11
+base_d = 14
 
 window_size = 30
 
