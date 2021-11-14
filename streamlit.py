@@ -103,7 +103,7 @@ def main():
             st.pyplot(fig)
 
     elif selected_item == 'Covid19予測（LSTM）':
-        selected_item = st.selectbox('・何日後まで予測するか選択して下さい。',
+        selected_item = st.selectbox('・2021年11月14日以降の感染者数を予測します。何日後まで予測するか選択して下さい。',
                                  ['', '10日後', '20日後', '30日後', '60日後'])
         #予測ボタン
         start = st.button('予測開始')
