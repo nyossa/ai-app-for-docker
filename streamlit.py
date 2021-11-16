@@ -67,7 +67,9 @@ def main():
                 use_column_width=True #画像の横幅をカラム幅に合わせす。
             )
 
-            out = analyze_resnet(image)
+            # 32*32のCIFAR100で学習しているので、その入力数に合わせる。
+            resized_image = image.resize((32, 32))
+            out = analyze_resnet(resized_image)
             out_F = F.softmax(out, dim=1)
 
             out_F, batch_indices = out_F.sort(dim=1, descending=True)
